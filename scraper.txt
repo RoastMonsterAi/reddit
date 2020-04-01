@@ -1,0 +1,75 @@
+import praw,requests,re
+import pandas as pd
+import os
+import shutil
+from praw.models import MoreComments
+
+
+
+reddit = praw.Reddit(client_id='CqG2fhMJNH771w', \
+                     client_secret='ENNGWlaoIjXUJWfCeceMGhd8yOc', \
+                     user_agent='RoastMonsterAi', \
+                     username=' RoastMonsterAi', \
+                     password='TeamRM2020')
+
+
+subreddit = reddit.subreddit('RoastMe')
+
+top_subreddit = subreddit.top()
+
+images = []
+comments = []
+
+for submission in subreddit.top(limit=11):
+    if not submission.stickied:
+        images.append(submission.url)
+        url = submission.url
+        file_name = url.split("/")
+        if len(file_name) == 0:
+            file_name = re.findall("/(.*?)", url)
+        file_name = file_name[-1]
+        if "." not in file_name:
+            file_name += ".jpg"
+        resp = requests.get(url, stream=True)
+        # Open a local file with wb ( write binary ) permission.
+        local_file = open(file_name, 'wb')
+        # Set decode_content value to True, otherwise the downloaded image file's size will be zero.
+        resp.raw.decode_content = True
+        # Copy the response stream raw data to local image file.
+        shutil.copyfileobj(resp.raw, local_file)
+        # Remove the image url response object.
+        del resp
+
+
+    
+    # Set comment sort to best before retrieving comments
+    submission.comment_sort = 'best'
+    # Limit to, at most, 5 top level comments
+    submission.comment_limit = 10
+    # Fetch the comments and print each comment body
+    # This must be done _after_ the above lines or they won't take affect.
+    for top_level_comment in submission.comments:
+        if isinstance(top_level_comment, praw.models.MoreComments):
+            continue
+        # Here you can fetch data off the comment.
+        # For the sake of example, we're just printing the comment body.
+        comments.append(top_level_comment.body)
+
+
+    
+Image_Urls = pd.DataFrame(
+    {'Image_urls':images,
+    }
+)
+
+Image_Urls.to_csv('images.csv')
+
+
+
+comments = pd.DataFrame(
+    {'Comments':comments,
+    }
+)
+
+comments.to_csv('comments.csv')
+    
